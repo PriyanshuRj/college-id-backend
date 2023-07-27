@@ -41,7 +41,7 @@ export class AuthService{
                                 firstname,
                                 lastname,
                                 email,
-                                password : hashedPassword
+                                password : hashedPassword,
                             })
                         ).pipe(
                             map((user: User)=>{
