@@ -1,4 +1,3 @@
-import { PostEntity } from 'src/posts/models/post.entity';
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 
 @Entity('user')
@@ -18,7 +17,30 @@ export class UserEntity {
     @Column()
     lastname: string;
 
-    @OneToMany(()=>PostEntity, (post)=> post.author)
-    posts : PostEntity[];
+    @Column({nullable : true})
+    DIDString : string;
+  
+    @Column({nullable : true})
+    DID : string
+}
 
+@Entity('admin')
+export class AdminEntity {
+    @PrimaryGeneratedColumn()
+    id: string;
+
+    @Column({ unique : true})
+    email: string;
+
+    @Column({ select : false})
+    password: string;
+
+    @Column()
+    name: string;
+
+    @Column({nullable : true})
+    DIDString : string;
+  
+    @Column({nullable : true})
+    DID : string;
 }

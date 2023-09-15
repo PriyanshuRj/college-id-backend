@@ -1,14 +1,22 @@
 import { IsEmail, IsString } from "class-validator";
-import { PostInterface } from "src/posts/models/post.interface";
 
 export class User {
-    id?: string;
+    id: string;
     @IsEmail()
     email?:string;
     firstname?:string;
     lastname?:string;
     @IsString()
     password?:string;
-    posts : PostInterface[];
 
+}
+
+export class Admin{
+    id: string;
+    @IsEmail()
+    email: string;
+    name: string;
+    
+    @IsString()
+    password: string;
 }
