@@ -137,7 +137,13 @@ export class PolygonService {
     return { did };
   }
 
-  async issueCredential(req: any, email: string) {
+  async saveAllCredentialsToStorage(credentials: any) {
+    const { dataStorage, identityWallet, credentialWallet } =
+      await this.initDataStorageAndWallets();
+    const res = await dataStorage.credential.saveAllCredentials(credentials);
+    return true;
+  }
+  async issueCredential(req: [any], email: string) {
     const { dataStorage, identityWallet, credentialWallet } = await this.initDataStorageAndWallets();
 
     const DIDmain = await this.createIdentity(email);
@@ -145,11 +151,8 @@ export class PolygonService {
     const didFound = allDIDs.filter(did => core.DID.parse(did.did).id == DIDmain.did.id)
     var did = core.DID.parse(didFound[0].did);
 
-
-    console.log({ did })
     let credentials = [];
     for (let i = 0; i < req.length; i++) {
-      console.log(req[i])
       req[i].cred.expiration = 12345678888;
       req[i].cred.revocationOpts = {
         id: 'https://rhs-staging.polygonid.me',
@@ -160,10 +163,10 @@ export class PolygonService {
       const credential = await identityWallet.issueCredential(did, req[i].cred);
       credentials.push(credential);
     }
+    await this.saveAllCredentialsToStorage(credentials);
     console.log(credentials)
     return credentials;
   }
-
 
   async createProofRequest(req: any) {
     console.log(req)
@@ -219,14 +222,6 @@ export class PolygonService {
 
     return (mtpProofOk);
   }
-
-  async saveAllCredentialsToStorage(credentials: any) {
-    const { dataStorage, identityWallet, credentialWallet } =
-      await this.initDataStorageAndWallets();
-    const res = await dataStorage.credential.saveAllCredentials(credentials);
-    return true;
-  }
-
 
   async generateProof(data: { proofReq: any }, email: string) {
 
