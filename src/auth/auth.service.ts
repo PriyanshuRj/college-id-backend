@@ -19,10 +19,20 @@ export class AuthService{
     ) {
         
     }
+    /**
+     * Hashes a password using bcrypt and returns it as an observable.
+     * @param {string} password - The password to hash.
+     * @returns {Observable<string>} An observable that emits the hashed password.
+     */
     hashPassword(password: string) : Observable<string> {
         return from(bcrypt.hash(password, 12));
     }
 
+    /**
+     * Checks if a user with the given email exists and returns a boolean observable.
+     * @param {string} email - The email to check.
+     * @returns {Observable<boolean>} An observable that emits `true` if the user exists, otherwise `false`.
+     */
     doesUserExist(email: string): Observable<boolean>  {
         return from(this.userRepository.findOneBy({ email })).pipe(
             switchMap((user : User)=>{
@@ -30,6 +40,12 @@ export class AuthService{
             })
         )
     }
+
+    /**
+     * Checks if an admin with the given email exists and returns a boolean observable.
+     * @param {string} email - The email to check.
+     * @returns {Observable<boolean>} An observable that emits `true` if the admin exists, otherwise `false`.
+     */
     doesAdminExists(email : string) : Observable<boolean> {
         return from(this.adminRepository.findOneBy({ email })).pipe(
             switchMap((admin : Admin)=>{
@@ -37,6 +53,12 @@ export class AuthService{
             })
         )
     }
+
+    /**
+     * Sign up a new user with the provided user object.
+     * @param {User} user - The user object containing signup information.
+     * @returns {Promise<Observable<User>>} A promise that resolves to an observable emitting the signed-up user.
+     */
     async signup(user: User) : Promise<Observable<User>> {
         const {firstname, lastname, email, password } = user;
         const {did} = await this.polygonService.createIdentity(email);
@@ -70,6 +92,12 @@ export class AuthService{
            
         )
     }
+
+    /**
+     * Sign up a new admin with the provided admin object.
+     * @param {Admin} admin - The admin object containing signup information.
+     * @returns {Promise<Observable<Admin>>} A promise that resolves to an observable emitting the signed-up admin.
+     */
     async signupAsdmin(admin: Admin) : Promise<Observable<Admin>> {
         const {name, email, password } = admin;
         const {did} = await this.polygonService.createIdentity(email);
@@ -100,6 +128,14 @@ export class AuthService{
             })
         )
     }
+
+    /**
+     * Validates user credentials by comparing the provided password with the stored hashed password.
+     * @param {string} email - The user's email.
+     * @param {string} password - The user's password.
+     * @returns {Observable<User>} An observable that emits the validated user if successful.
+     * @throws {HttpException} Throws an exception if credentials are invalid.
+     */
     validateUser(email : string, password : string) : Observable<User> {
         return from(this.userRepository.findOne({where : {
             email
@@ -128,6 +164,14 @@ export class AuthService{
             })
         )
     }
+
+    /**
+     * Validates admin credentials by comparing the provided password with the stored hashed password.
+     * @param {string} email - The admin's email.
+     * @param {string} password - The admin's password.
+     * @returns {Observable<Admin>} An observable that emits the validated admin if successful.
+     * @throws {HttpException} Throws an exception if credentials are invalid.
+     */
     validateAdmin(email : string, password : string) : Observable<Admin> {
         return from(this.adminRepository.findOne({where : {
             email
@@ -156,6 +200,12 @@ export class AuthService{
             })
         )
     }
+
+    /**
+     * Logs in a user and returns a JWT token.
+     * @param {User} user - The user object containing login information.
+     * @returns {Observable<string>} An observable that emits a JWT token if login is successful.
+     */
     login (user : User) : Observable<string>{
         const {email, password} = user;
 
@@ -165,6 +215,12 @@ export class AuthService{
             })
         )
     }
+
+    /**
+     * Logs in an admin and returns a JWT token with an "isAdmin" flag.
+     * @param {Admin} admin - The admin object containing login information.
+     * @returns {Observable<string>} An observable that emits a JWT token if login is successful.
+     */
     loginAdmin (admin : Admin) : Observable<string>{
         const {email, password} = admin;
 
@@ -175,6 +231,12 @@ export class AuthService{
             })
         )
     }
+
+    /**
+     * Retrieves a user from a JWT token.
+     * @param {string} jwt - The JWT token to decode and extract user information.
+     * @returns {Observable<User | null>} An observable that emits the user if JWT is valid, otherwise null.
+     */
     getHWTUser(jwt: string) : Observable<User | null> {
         return from (this.jwtService.verifyAsync(jwt)).pipe(
             map((user: User)=>{

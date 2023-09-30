@@ -26,8 +26,9 @@ export class CredentialsService {
   * Function to check if a request with the given name and requestor email exists
   * @param {string} holder_email - email of the holder from who requested the credential
   * @param {string} template_name - name of the template
+  * @returns {Observable<boolean>} An observable that emits `true` if the request exists, otherwise `false`.
   */
-  doesRequestExists(holder_email : string, template_name : string){
+  doesRequestExists(holder_email : string, template_name : string) : Observable<boolean> {
     return from(this.credentialRequestRepository.findOneBy({
       holder_email: holder_email,
       template_name: template_name
@@ -43,8 +44,9 @@ export class CredentialsService {
   * Function to check if a template with the given name and creator email exists
   * @param {string} issuer_email - email of the issuer from whome credential is requested
   * @param {string} template_name - name of the template
+  * @returns {Observable<boolean>} An observable that emits `true` if the template exists, otherwise `false`.
   */
-  doestTemplateExists(issuer_email : string, template_name : string){
+  doestTemplateExists(issuer_email : string, template_name : string) : Observable<boolean>{
     return from(this.credentialTemplateRepository.findOneBy({
       createdBy: issuer_email,
       name: template_name
@@ -54,11 +56,14 @@ export class CredentialsService {
       })
     )
   }
-  /**
-  *
-  * Function to create a credential request
-  * @param {CredentialRequest} credential - credential request that has been sent
-  */
+
+ /**
+ * Requests a new credential using the provided credential request object.
+ * @param {CredentialRequest} credential - The credential request object.
+ * @returns {Observable<{message: string, credetntialRequest: CredentialRequest}>}
+ *   An observable that emits a message and the created credential request if successful.
+ * @throws {HttpException} Throws exceptions if a request for the same template already exists or if the template does not exist.
+ */
   requestCredential(credential: CredentialRequest) : Observable<{message : string, credetntialRequest : CredentialRequest }> {
     return this.doesRequestExists(credential.template_name,credential.issuer_email).pipe(
       tap((doesRequestExists : boolean) =>{
@@ -96,6 +101,7 @@ export class CredentialsService {
   * Function to list all the requests for a perticular issuer for a perticular template
   * @param {string} name - template name for which we want to fetch the requests
   * @param {string} email - Issuer Email for whome we want to fetch the requests
+  * @returns {Observable<CredentialRequest[]>} An observable that emits an array of matching Credential Requests.
   */
   listRequestedCredentials(name: string, email: string) : Observable<CredentialRequest[]>{
     return from(
@@ -110,6 +116,7 @@ export class CredentialsService {
   *
   * Function to list all the  credential requests of a perticular holder
   * @param {string} holder_email - Holder Email for whome we want to fetch the requests
+  * @returns {Observable<CredentialRequest[]>} An observable that emits an array of matching Credential Requests.
   */
   listAllRequestedCredential(holder_email: string): Observable<CredentialRequest[]> {
     return from(this.credentialRequestRepository.findBy({
@@ -118,11 +125,13 @@ export class CredentialsService {
   }
 
   /**
-  *
-  * Function to issue a credential to a perticular holder
-  * @param {string} email - Issuer Email who is issuing the given credentials
-  * @param {[CredentialRequest]} credentialRequests - List of all the requested credentials
-  */
+ * Issues credentials for a given user by processing a list of credential requests.
+ * @param {string} email - The email of the user for whom credentials are issued.
+ * @param {CredentialRequest[]} credentialRequests - An array of credential requests to be processed.
+ * @returns {Promise<Observable<{message: string}>>} A promise that resolves to an observable emitting a success message
+ * when all credentials are issued successfully.
+ * @throws {HttpException} Throws an exception if a credential already exists for a request or other validation errors occur.
+ */
   async issueCredentials(email: string, credentialRequests: [CredentialRequest]) : Promise<Observable<{message : string}>> {
     const credentials = await this.poligonService.issueCredential(credentialRequests, email);
     
@@ -191,6 +200,7 @@ export class CredentialsService {
   *
   * Function to list all the credentials owned by a perticular holder
   * @param {string} holder_email - Holder Email for whome we want to fetch the credentials
+  * @returns {Observable<Credential[]>} An observable that emits an array of matching Credentials.
   */
   getAllCredentialsOfHolder(holder_email : string) : Observable<Credential[]>{
     return from(this.credentialRepository.findBy({
@@ -202,6 +212,7 @@ export class CredentialsService {
   *
   * Function to get a single credential
   * @param {string} id - Credential's unique id
+  * @returns {Observable<Credential>} An observable that emits matching Credentials.
   */
   getOneCredential(id : string) : Observable<Credential>{
     return from(this.credentialRepository.findOneBy({
@@ -213,6 +224,7 @@ export class CredentialsService {
   *
   * Function to fetch all the templates created by a issuer
   * @param {string} email - Issuer Email who's all created templates we wish to fetch
+  * @returns {Observable<{message : string, templates : any[]}>} An observable that emits a message for successfull fetching and an array of matching Credential Templates.
   */
   fetchAllTemplates(email: string) :Observable<{message : string, templates : any[]}> {
     return from(
@@ -232,6 +244,7 @@ export class CredentialsService {
   *
   * Function to create Credential Template
   * @param {CredentialTemplate} template - The template which we wish to create
+  * @returns {Observable<{message : string, templates : any}>} An observable that emits a message for successfull creation andthe created credential template.
   */
   createCredentialTemplate(template: CredentialTemplate) : Observable<{message : string, template : any}> {
     return from(
