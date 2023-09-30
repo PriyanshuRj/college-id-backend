@@ -4,7 +4,7 @@ import { CredentialEntity, CredentialRequestEntity, CredentialTemplateEntity } f
 import { Repository } from 'typeorm';
 import { CredentialRequest, CredentialTemplate, Credential } from './models/credential.class';
 import { PolygonService } from 'src/polygon/polygon.service';
-import { Observable, from, switchMap, of, tap, map, catchError, firstValueFrom } from "rxjs";
+import { Observable, from, switchMap, of, tap, map, catchError, firstValueFrom, concatMap, throwError, forkJoin } from "rxjs";
 
 @Injectable()
 export class CredentialsService {
@@ -123,7 +123,7 @@ export class CredentialsService {
   * @param {string} email - Issuer Email who is issuing the given credentials
   * @param {[CredentialRequest]} credentialRequests - List of all the requested credentials
   */
-  async issueCredentials(email: string, credentialRequests: [CredentialRequest]) {
+  async issueCredentials(email: string, credentialRequests: [CredentialRequest]) : Promise<Observable<{message : string}>> {
     const credentials = await this.poligonService.issueCredential(credentialRequests, email);
     
     // putting the expiration date, an year after the issuance date.
@@ -134,43 +134,57 @@ export class CredentialsService {
       currentDate.getDate(),
     );
 
-    for (let i = 0; i < credentials.length; i++) {
-      
-      const credentialObj = credentials[i];
-      const exisitingCred = await this.credentialRepository.findOneBy({
-        issuer_email: email,
-        holder: credentialObj.credentialSubject.id.toString(),
-        schema: credentialObj.credentialSchema.id.toString(),
-      });
+    const credentialObservables = credentials.map((credentialObj, index) => {
+      return from(
+        this.credentialRepository.findOneBy({
+          issuer_email: email,
+          holder: credentialObj.credentialSubject.id.toString(),
+          schema: credentialObj.credentialSchema.id.toString(),
+        })
+      ).pipe(
+        concatMap((existingCred) => {
+          if (existingCred) {
+            throw new HttpException(
+                {
+                  message: 'The credential already issued',
+                  description: 'The credential already issued',
+                },
+                HttpStatus.BAD_REQUEST
+              )
+        
+          }
 
+          // Save the new credential
+          return from(
+            this.credentialRepository.save({
+              credential_id: credentialObj.id,
+              issuer_email: email,
+              holder_email: credentialRequests[index].holder_email,
+              issuer: credentialObj.issuer,
+              holder: credentialObj.credentialSubject.id,
+              schema: credentialObj.credentialSchema.id,
+              credential: JSON.stringify(credentialObj),
+              credentialIssueDate: currentDate,
+              expiryDate: oneYearAfter,
+            })
+          ).pipe(
+            concatMap(() =>
+              // Delete the corresponding credential request
+              from(
+                this.credentialRequestRepository.delete({
+                  id: credentialRequests[index].id,
+                })
+              )
+            )
+          );
+        })
+      );
+    });
 
-      if (exisitingCred) {
-        throw new HttpException(
-          {
-            message: 'The credential already issued',
-            description: 'The credential already issued',
-          },
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-      await this.credentialRepository.save({
-        credential_id: credentialObj.id,
-        issuer_email: email,
-        holder_email: credentialRequests[i].holder_email,
-        issuer: credentialObj.issuer,
-        holder: credentialObj.credentialSubject.id,
-        schema: credentialObj.credentialSchema.id,
-        credential: JSON.stringify(credentialObj),
-        credentialIssueDate : currentDate,
-        expiryDate : oneYearAfter,
-      })
-
-      
-
-      await this.credentialRequestRepository.delete({
-        id: credentialRequests[i].id
-      })
-    }
+    // Use forkJoin to execute all the credential observables in parallel
+    return forkJoin(credentialObservables).pipe(
+      map(() => ({ message: 'Credentials Created Successfully' }))
+    );
   }
 
   /**
