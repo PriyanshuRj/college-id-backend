@@ -168,7 +168,7 @@ export class PolygonService {
     return credentials;
   }
 
-  async createProofRequest(req: any) {
+  async genrateProofRequest(req: any) {
     console.log(req)
     const proofReqSig = {
       id: 1,
@@ -176,8 +176,6 @@ export class PolygonService {
       optional: false,
       query: {
         allowedIssuers: ['*'],
-        type: 'VoterID',
-        context: 'https://raw.githubusercontent.com/mithesh16/PolygonIDSchemas/main/VoterIDSchema/voterID.jsonld',
         credentialSubject: req,
       },
     };

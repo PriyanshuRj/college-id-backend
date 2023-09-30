@@ -6,6 +6,8 @@ import { CredentialsController } from './credentials.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { PolygonService } from 'src/polygon/polygon.service';
 import { DIDEntity } from 'src/storage/entities/storage.entity';
+import { AdminGuard } from 'src/auth/guards/admin.gurad';
+import { JwtGuard } from 'src/auth/guards/jwt.guard';
 @Module({
     imports: [
         JwtModule.registerAsync({
@@ -17,8 +19,8 @@ import { DIDEntity } from 'src/storage/entities/storage.entity';
         TypeOrmModule.forFeature([CredentialEntity, CredentialRequestEntity, CredentialTemplateEntity, DIDEntity])
     ],
   
-    providers: [CredentialsService],
-    controllers: [CredentialsController, PolygonService]
+    providers: [CredentialsService, PolygonService, AdminGuard, JwtGuard],
+    controllers: [CredentialsController]
 })
 export class CredentialsModule {
 
