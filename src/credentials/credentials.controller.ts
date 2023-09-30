@@ -2,7 +2,8 @@ import { Controller, Get, UseGuards, Req, Post, Query, HttpException, HttpStatus
 import { CredentialsService } from './credentials.service';
 import { AdminGuard } from 'src/auth/guards/admin.gurad';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
-import { CredentialRequest, CredentialTemplate } from './models/credential.class';
+import { CredentialRequest, CredentialTemplate, Credential } from './models/credential.class';
+import {Observable} from 'rxjs';
 
 @Controller('credentials')
 @UseGuards(JwtGuard)
@@ -10,47 +11,40 @@ export class CredentialsController {
     constructor (private readonly credentialService : CredentialsService) {}
     
     @UseGuards(AdminGuard)
-    @Get()
-    async call(@Req() request){
-        return request.user;
-    }
-
-    
-    @UseGuards(AdminGuard)
     @Get('templates')
-    async getAllTemplates(@Req() request){
+    getAllTemplates(@Req() request : any) : Observable<{message : string, templates : any[]}>{
         const email = request.user.email;
-        return await this.credentialService.fetchAllTemplates(email);
+        return this.credentialService.fetchAllTemplates(email);
     }
 
     @UseGuards(AdminGuard)
     @Post('create-template')
-    async createTemplate(template : CredentialTemplate){
+    createTemplate(template : CredentialTemplate) :  Observable<{message : string, template : any}>{
         if(!template){
             throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST)
         }
-        return await this.credentialService.createCredentialTemplate(template);
+        return this.credentialService.createCredentialTemplate(template);
     }
 
     @Get('single-credential')
-    async fetchOneCredential(@Query() id : string){
+    fetchOneCredential(@Query() id : string) :  Observable<Credential>{
         if(!id){
             throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST)
         }
-        return await this.credentialService.getOneCredential(id);
+        return this.credentialService.getOneCredential(id);
     }
 
     @Get('get-my-credentials')
-    async getMyCredentials(@Query() email : string){
+    getMyCredentials(@Query() email : string) : Observable<Credential[]> {
         if(!email){
             throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST)
         }
-        return await this.credentialService.getAllCredentialsOfHolder(email);
+        return this.credentialService.getAllCredentialsOfHolder(email);
     }
 
     @UseGuards(AdminGuard)
     @Post('issue')
-    async issueCredentials(@Req() request, credentialRequests : [CredentialRequest]){
+    async issueCredentials(@Req() request, credentialRequests : [CredentialRequest]) : Promise<Observable<{message : string}>> {
         const email = request.user.email;
         if(!credentialRequests){
             throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST)
@@ -59,26 +53,26 @@ export class CredentialsController {
     }
 
     @Get('get-my-requests')
-    async getMyPendingRequests(@Req() request){
+    getMyPendingRequests(@Req() request : any)  : Observable<CredentialRequest[]> {
         const email = request.user.email;
-        return await this.credentialService.listAllRequestedCredential(email);
+        return this.credentialService.listAllRequestedCredential(email);
     }
 
     @UseGuards(AdminGuard)
     @Get('list-requets')
-    async listRequests(@Req() request, @Query() template : string){
+    listRequests(@Req() request : any, @Query() template : string) : Observable<CredentialRequest[]> {
         const email = request.user.email;
         if(!template){
             throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST)
         }
-        return await this.credentialService.listRequestedCredentials(template, email);
+        return this.credentialService.listRequestedCredentials(template, email);
     }
 
     @Post('request')
-    async request(requestedCredentials : CredentialRequest){
+    request(requestedCredentials : CredentialRequest) : Observable<{message : string, credetntialRequest : CredentialRequest }> {
         if(!requestedCredentials){
             throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST)
         }
-        return await this.credentialService.requestCredential(requestedCredentials);
+        return this.credentialService.requestCredential(requestedCredentials);
     }
 }

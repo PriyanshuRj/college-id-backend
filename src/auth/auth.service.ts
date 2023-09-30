@@ -7,6 +7,7 @@ import * as bcrypt from "bcrypt";
 import { Admin, User } from "./models/user.class";
 import { JwtService } from "@nestjs/jwt";
 import { PolygonService } from "src/polygon/polygon.service";
+
 @Injectable()
 export class AuthService{
     constructor(
@@ -19,6 +20,7 @@ export class AuthService{
     ) {
         
     }
+    
     /**
      * Hashes a password using bcrypt and returns it as an observable.
      * @param {string} password - The password to hash.

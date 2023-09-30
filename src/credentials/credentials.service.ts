@@ -103,7 +103,7 @@ export class CredentialsService {
   * @param {string} email - Issuer Email for whome we want to fetch the requests
   * @returns {Observable<CredentialRequest[]>} An observable that emits an array of matching Credential Requests.
   */
-  listRequestedCredentials(name: string, email: string) : Observable<CredentialRequest[]>{
+  listRequestedCredentials(name: string, email: string) : Observable<CredentialRequest[]> {
     return from(
       this.credentialRequestRepository.findBy({
         template_name: name,
@@ -118,7 +118,7 @@ export class CredentialsService {
   * @param {string} holder_email - Holder Email for whome we want to fetch the requests
   * @returns {Observable<CredentialRequest[]>} An observable that emits an array of matching Credential Requests.
   */
-  listAllRequestedCredential(holder_email: string): Observable<CredentialRequest[]> {
+  listAllRequestedCredential(holder_email: string) : Observable<CredentialRequest[]> {
     return from(this.credentialRequestRepository.findBy({
       holder_email: holder_email,
     }));
@@ -202,7 +202,7 @@ export class CredentialsService {
   * @param {string} holder_email - Holder Email for whome we want to fetch the credentials
   * @returns {Observable<Credential[]>} An observable that emits an array of matching Credentials.
   */
-  getAllCredentialsOfHolder(holder_email : string) : Observable<Credential[]>{
+  getAllCredentialsOfHolder(holder_email : string) : Observable<Credential[]> {
     return from(this.credentialRepository.findBy({
       holder_email : holder_email
     }))

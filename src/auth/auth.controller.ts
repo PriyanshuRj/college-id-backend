@@ -2,6 +2,7 @@ import { Controller, Post, Body } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { User,Admin } from "./models/user.class";
 import { Observable, map } from "rxjs";
+
 @Controller('auth')
 export class AuthController {
     constructor(private authService : AuthService) {}
