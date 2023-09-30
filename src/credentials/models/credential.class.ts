@@ -7,6 +7,8 @@ export interface Credential {
     credential_id : string;
     issuer_email : string;
     holder_email : string;
+    credentialIssueDate ?: Date;
+    expiryDate ? : Date;
 }
 
 interface Attributes{
@@ -16,6 +18,7 @@ interface Attributes{
     id : string;
 }
 export interface CredentialTemplate {
+    id ?: string;
     name : string;
     discription: string;
     holder_email : string;

@@ -2,8 +2,9 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CredentialEntity, CredentialRequestEntity, CredentialTemplateEntity } from './models/credential.entity';
 import { Repository } from 'typeorm';
-import { CredentialRequest, CredentialTemplate } from './models/credential.class';
+import { CredentialRequest, CredentialTemplate, Credential } from './models/credential.class';
 import { PolygonService } from 'src/polygon/polygon.service';
+import { Observable, from, switchMap, of, tap, map, catchError, firstValueFrom } from "rxjs";
 
 @Injectable()
 export class CredentialsService {
@@ -20,41 +21,89 @@ export class CredentialsService {
     private readonly poligonService: PolygonService
   ) { }
 
+    /**
+  *
+  * Function to check if a request with the given name and requestor email exists
+  * @param {string} holder_email - email of the holder from who requested the credential
+  * @param {string} template_name - name of the template
+  */
+  doesRequestExists(holder_email : string, template_name : string){
+    return from(this.credentialRequestRepository.findOneBy({
+      holder_email: holder_email,
+      template_name: template_name
+    })).pipe(
+      switchMap((credentialRequest : CredentialRequest)=>{
+        return of(!!credentialRequest)
+      })
+    )
+  }
+
+  /**
+  *
+  * Function to check if a template with the given name and creator email exists
+  * @param {string} issuer_email - email of the issuer from whome credential is requested
+  * @param {string} template_name - name of the template
+  */
+  doestTemplateExists(issuer_email : string, template_name : string){
+    return from(this.credentialTemplateRepository.findOneBy({
+      createdBy: issuer_email,
+      name: template_name
+    })).pipe(
+      switchMap((credentialTemplate : any)=>{
+        return of(!!credentialTemplate)
+      })
+    )
+  }
   /**
   *
   * Function to create a credential request
   * @param {CredentialRequest} credential - credential request that has been sent
   */
-  async requestCredential(credential: CredentialRequest) {
-    const previousRequests = await this.credentialRequestRepository.findBy({
-      holder_email: credential.holder_email,
-      template_name: credential.template_name
-    })
-    if (previousRequests.length) return { message: "Request for this credential already in Queue" };
-    const template = await this.credentialTemplateRepository.findOneBy({
-      name: credential.template_name,
-      createdBy: credential.issuer_email
-    })
-    if (!template) return { message: "No template with this specification found" };
+  requestCredential(credential: CredentialRequest) : Observable<{message : string, credetntialRequest : CredentialRequest }> {
+    return this.doesRequestExists(credential.template_name,credential.issuer_email).pipe(
+      tap((doesRequestExists : boolean) =>{
+        if(doesRequestExists)
+        throw new HttpException('A request for this template already in queue', HttpStatus.BAD_REQUEST);
+      }),
+      switchMap(()=>{
+        return this.doestTemplateExists(credential.issuer_email, credential.template_name ).pipe(
+          tap((doesTemplateExists : boolean) =>{
+            if(!doesTemplateExists)
+              throw new HttpException('The template you are accessing does.t exists', HttpStatus.BAD_REQUEST);
 
-    await this.credentialRequestRepository.save({
-      ...credential
-    })
-    return { message: "Request saved !" }
+          }),
+          switchMap(()=>{
+            return from(
+              this.credentialRequestRepository.save({
+                ...credential
+              })
+            ).pipe(
+              map((credetntialRequest : CredentialRequest) =>{
+                return {
+                  message : "Request Created Successfully",
+                  credetntialRequest
+                }
+              })
+            )
+          })
+        )
+      })
+    )
   }
 
   /**
   *
-  * Function to list al the requests for a perticular issuer for a perticular template
+  * Function to list all the requests for a perticular issuer for a perticular template
   * @param {string} name - template name for which we want to fetch the requests
   * @param {string} email - Issuer Email for whome we want to fetch the requests
   */
-  async listRequestedCredentials(name: string, email: string) {
-    const requestedTemplates = await this.credentialRequestRepository.findBy({
-      template_name: name,
-      issuer_email: email
-    })
-    return requestedTemplates;
+  listRequestedCredentials(name: string, email: string) : Observable<CredentialRequest[]>{
+    return from(
+      this.credentialRequestRepository.findBy({
+        template_name: name,
+        issuer_email: email
+      })
+    )
   }
 
   /**
@@ -62,11 +111,10 @@ export class CredentialsService {
   * Function to list all the  credential requests of a perticular holder
   * @param {string} holder_email - Holder Email for whome we want to fetch the requests
   */
-  async listAllRequestedCredential(holder_email: string) {
-    const requestedCredentials = await this.credentialRequestRepository.findBy({
+  listAllRequestedCredential(holder_email: string): Observable<CredentialRequest[]> {
+    return from(this.credentialRequestRepository.findBy({
       holder_email: holder_email,
-    });
-    return requestedCredentials;
+    }));
   }
 
   /**
@@ -130,11 +178,10 @@ export class CredentialsService {
   * Function to list all the credentials owned by a perticular holder
   * @param {string} holder_email - Holder Email for whome we want to fetch the credentials
   */
-  async getAllCredentialsOfHolder(holder_email : string){
-    const credentials = await this.credentialRepository.findBy({
+  getAllCredentialsOfHolder(holder_email : string) : Observable<Credential[]>{
+    return from(this.credentialRepository.findBy({
       holder_email : holder_email
-    })
-    return credentials;
+    }))
   }
 
   /**
@@ -142,30 +189,29 @@ export class CredentialsService {
   * Function to get a single credential
   * @param {string} id - Credential's unique id
   */
-  async getOneCredential(id : string){
-    const credential = await this.credentialRepository.findOneBy({
+  getOneCredential(id : string) : Observable<Credential>{
+    return from(this.credentialRepository.findOneBy({
       id : id
-    })
-    return credential;
+    }))
   }
+
   /**
   *
   * Function to fetch all the templates created by a issuer
   * @param {string} email - Issuer Email who's all created templates we wish to fetch
   */
-  async fetchAllTemplates(email: string) {
-
-    try {
-      const allTemplates = await this.credentialTemplateRepository.find({
+  fetchAllTemplates(email: string) :Observable<{message : string, templates : any[]}> {
+    return from(
+      this.credentialTemplateRepository.find({
         where: { createdBy: email },
-      });
-
-      return { message: "Succesfully fetched all templates", templates: allTemplates }
-    }
-    catch (err) {
-      console.error(err)
-      return { "error": err }
-    }
+      })
+    ).pipe(
+      map((templates :any[])=>{
+        return { message: "Succesfully fetched all templates", 
+          templates
+        }
+      })
+    )
   }
 
   /**
@@ -173,15 +219,22 @@ export class CredentialsService {
   * Function to create Credential Template
   * @param {CredentialTemplate} template - The template which we wish to create
   */
-  async createCredentialTemplate(template: CredentialTemplate) {
-    await this.credentialTemplateRepository.save({
-      name: template.name,
-      discription: template.discription,
-      JSONurl: template.JSONurl,
-      LDurl: template.LDurl,
-      createdBy: template.createdBy,
-      attributes: JSON.stringify(template.attributes)
-    });
-    return { message: "Successfully Added new Credential Template" }
+  createCredentialTemplate(template: CredentialTemplate) : Observable<{message : string, template : any}> {
+    return from(
+      this.credentialTemplateRepository.save({
+        name: template.name,
+        discription: template.discription,
+        JSONurl: template.JSONurl,
+        LDurl: template.LDurl,
+        createdBy: template.createdBy,
+        attributes: JSON.stringify(template.attributes)
+      })
+    ).pipe(
+      map((template : any)=>{
+        return { message: "Successfully Added new Credential Template",
+        template
+      }
+      })
+    )
   }
 }
